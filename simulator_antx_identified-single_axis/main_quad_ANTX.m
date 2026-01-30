@@ -16,9 +16,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % clearvars;
-close all;
-addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
-clc;
+
+% addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
 
 %% Model parameters
 
