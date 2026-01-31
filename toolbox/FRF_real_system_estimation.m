@@ -4,11 +4,8 @@
 % MONTE CARLO VERSION: Multiple Simulink runs + tfestimate/mscohere
 % ========================================================================
 
-function [H_q_trusted,H_ax_trusted,freq_vect] = FRF_real_system_estimation(u_combined,q_combined,ax_combined,t_combined,fs)
+function [H_q,H_ax,f] = FRF_real_system_estimation(u_combined,q_combined,ax_combined,t_combined,fs)
 set(0,'DefaultFigureWindowStyle','docked')
-
-
-
 
 
 % Final signals are concatenated data from all runs
@@ -54,67 +51,70 @@ fprintf('\nStep 5: Coherence analysis with mscohere...\n');
 coh_q_mean = mean(coh2_q);
 coh_ax_mean = mean(coh2_ax);
 
+%% da scommentare
 
-%% STEP 6: VISUALIZATION (dB + deg)
-fprintf('\nStep 6: Plotting results...\n');
-
-% FIGURA 1: FRF Bode Plots
-figure('Position', [100,100,1200,800], 'Name', 'FRF Welch - Bode');
-
-subplot(2,2,1); 
-semilogx(f, 20*log10(abs(H_q)), 'b-', 'LineWidth', 2); 
-grid on; title('Pitch Rate |H_q| '); ylabel('[dB]'); 
-ylim([-60 20]); xlim([f(1) f(end)]);
-
-subplot(2,2,2); 
-semilogx(f, 20*log10(abs(H_ax)), 'b-', 'LineWidth', 2);
-grid on; title('Acceleration |H_{ax}| '); ylabel('[dB]'); 
-ylim([-60 40]); xlim([f(1) f(end)]);
-
-subplot(2,2,3); 
-semilogx(f, angle(H_q)*180/pi, 'r-', 'LineWidth', 2);
-grid on; xlabel('Frequency [Hz]'); ylabel('Phase [°]'); 
-ylim([-180 180]); xlim([f(1) f(end)]);
-
-subplot(2,2,4); 
-semilogx(f, angle(H_ax)*180/pi, 'r-', 'LineWidth', 2);
-grid on; xlabel('Frequency [Hz]'); ylabel('Phase [°]'); 
-ylim([-180 180]); xlim([f(1) f(end)]);
-
-sgtitle(sprintf('FRF Estimation - Welch Method )'), 'FontSize', 14, 'FontWeight', 'bold');
-
-% FIGURA 2: Coherence
-figure('Position', [200,200,1000,500], 'Name', 'Coherence Functions');
-
-subplot(1,2,1); 
-semilogx(f, coh2_q, 'g-', 'LineWidth', 2);
-hold on; 
-yline(0.6, 'r--', 'LineWidth', 2, 'Label', 'γ²=0.6 (Trust Threshold)');
-grid on; title('Pitch Rate Coherence'); ylabel('γ²'); ylim([0 1.1]);
-xlim([f(1) f(end)]);
-legend('γ²', 'Trust Threshold', 'Mean', 'Location', 'best');
-
-subplot(1,2,2); 
-semilogx(f, coh2_ax, 'g-', 'LineWidth', 2);
-hold on; 
-yline(0.6, 'r--', 'LineWidth', 2, 'Label', 'γ²=0.6 (Trust Threshold)');
-grid on; title('Acceleration Coherence'); xlabel('Frequency [Hz]'); 
-ylabel('γ²'); ylim([0 1.1]); xlim([f(1) f(end)]);
-legend('γ²', 'Trust Threshold', 'Mean', 'Location', 'best');
+% %% STEP 6: VISUALIZATION (dB + deg)
+% fprintf('\nStep 6: Plotting results...\n');
+% 
+% % FIGURA 1: FRF Bode Plots
+% figure('Position', [100,100,1200,800], 'Name', 'FRF Welch - Bode');
+% 
+% subplot(2,2,1); 
+% semilogx(f, 20*log10(abs(H_q)), 'b-', 'LineWidth', 2); 
+% grid on; title('Pitch Rate |H_q| '); ylabel('[dB]'); 
+% ylim([-60 20]); xlim([f(1) f(end)]);
+% 
+% subplot(2,2,2); 
+% semilogx(f, 20*log10(abs(H_ax)), 'b-', 'LineWidth', 2);
+% grid on; title('Acceleration |H_{ax}| '); ylabel('[dB]'); 
+% ylim([-60 40]); xlim([f(1) f(end)]);
+% 
+% subplot(2,2,3); 
+% semilogx(f, angle(H_q)*180/pi, 'r-', 'LineWidth', 2);
+% grid on; xlabel('Frequency [Hz]'); ylabel('Phase [°]'); 
+% ylim([-180 180]); xlim([f(1) f(end)]);
+% 
+% subplot(2,2,4); 
+% semilogx(f, angle(H_ax)*180/pi, 'r-', 'LineWidth', 2);
+% grid on; xlabel('Frequency [Hz]'); ylabel('Phase [°]'); 
+% ylim([-180 180]); xlim([f(1) f(end)]);
+% 
+% sgtitle(sprintf('FRF Estimation - Welch Method )'), 'FontSize', 14, 'FontWeight', 'bold');
+% 
+% % FIGURA 2: Coherence
+% figure('Position', [200,200,1000,500], 'Name', 'Coherence Functions');
+% 
+% subplot(1,2,1); 
+% semilogx(f, coh2_q, 'g-', 'LineWidth', 2);
+% hold on; 
+% yline(0.6, 'r--', 'LineWidth', 2, 'Label', 'γ²=0.6 (Trust Threshold)');
+% grid on; title('Pitch Rate Coherence'); ylabel('γ²'); ylim([0 1.1]);
+% xlim([f(1) f(end)]);
+% legend('γ²', 'Trust Threshold', 'Mean', 'Location', 'best');
+% 
+% subplot(1,2,2); 
+% semilogx(f, coh2_ax, 'g-', 'LineWidth', 2);
+% hold on; 
+% yline(0.6, 'r--', 'LineWidth', 2, 'Label', 'γ²=0.6 (Trust Threshold)');
+% grid on; title('Acceleration Coherence'); xlabel('Frequency [Hz]'); 
+% ylabel('γ²'); ylim([0 1.1]); xlim([f(1) f(end)]);
+% legend('γ²', 'Trust Threshold', 'Mean', 'Location', 'best');
 
 
 %% STEP 7: CONFIDENCE-BASED MASKING
-fprintf('\nStep 7: Quality filtering...\n');
 
-trust_threshold = 0.5;  % Standard engineering practice
 
-% Definisci la maschera logica combinata
-index = (coh2_q > trust_threshold) & (coh2_ax > trust_threshold);
-
-% Applica la maschera ai vettori
-H_q_trusted = H_q(index);
-H_ax_trusted = H_ax(index);
-freq_vect = f(index);
+% fprintf('\nStep 7: Quality filtering...\n');
+% 
+% trust_threshold = 0.5;  % Standard engineering practice
+% 
+% % Definisci la maschera logica combinata
+% index = (coh2_q > trust_threshold) & (coh2_ax > trust_threshold);
+% 
+% % Applica la maschera ai vettori
+% H_q_trusted  = H_q(index);
+% H_ax_trusted = H_ax(index);
+% freq_vect    = f(index);
 
 
 end

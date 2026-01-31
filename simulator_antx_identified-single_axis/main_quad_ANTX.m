@@ -80,15 +80,24 @@ t=ExcitationM(:,1);
 
 simulation_time=t(end)-t(1);
 
+%% white noise seed (angelo)
+
+% originali
+Seed_pos = 1;
+Seed_vel = 2;
+Seed_theta = 3;
+Seed_q = 4;
+Seed_ax = 5;
+
 %% Launch SIMULATOR
 
-out = sim("Simulator_Single_Axis");
+% out = sim("Simulator_Single_Axis");
 
 
 %% Delete temporary files
 
-if exist('slprj','dir')
-    rmdir('slprj', 's')                                                    
-end
+% if exist('slprj','dir')
+%     rmdir('slprj', 's')                                                    
+% end
 
 %% END OF CODE

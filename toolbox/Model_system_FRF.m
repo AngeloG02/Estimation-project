@@ -22,7 +22,7 @@ function H = Model_system_FRF(theta,freq_vect)
     C = [0,   1, 0;      % prima uscita (q)
          X_u, X_q, 0];   % seconda uscita (a_x)
 
-    D = [0, X_d];        % [2x1] feedthrough
+    D = [0; X_d];        % [2x1] feedthrough
 
     K = numel(freq_vect);
     H_q  = zeros(K,1);
