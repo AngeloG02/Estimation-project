@@ -209,15 +209,15 @@ opt.SearchMethod = 'auto';
 opt.SearchOptions.MaxIterations = 100;
 % assegna un range in cui cercare i parametri
 theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
-for i = 1:length(theta_true)
-    if theta_true(i) < 0
-        init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i)* 2;
-        init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) /2;
-    else
-        init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) /2;
-        init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) *2;
-    end
-end
+% for i = 1:length(theta_true)
+%     if theta_true(i) < 0
+%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i)* 2;
+%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) /2;
+%     else
+%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) /2;
+%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) *2;
+%     end
+% end
 %% =============================================
 %  STEP 7: ESEGUI GREYEST CON DATI FREQUENZIALI
 %  =============================================
