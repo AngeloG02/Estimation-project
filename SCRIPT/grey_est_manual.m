@@ -57,7 +57,7 @@ ax_no_mean = ax - mean(ax);
 % Apply the Welch method to compute smooth estimates of the auto- and
 % cross-power spectral densities (PSDs). This robustly handles the high
 % variance of a simple periodogram.
-fprintf('Step 3: Performing spectral estimation using Welch''s method... (σ_q=%.2f°/s, σ_ax=%.4f m/s²)\n', sigma_q, sigma_ax);
+fprintf('Step 3: Performing spectral estimation using hanning method... (σ_q=%.2f°/s, σ_ax=%.4f m/s²)\n', sigma_q, sigma_ax);
 
 % Define Welch method parameters
 M = 2048;               % Segment length (a power of 2 for FFT efficiency)
@@ -88,9 +88,9 @@ gamma_sq_q = (abs(Suq).^2) ./ (Suu .* Sqq);
 gamma_sq_ax = (abs(Suax).^2) ./ (Suu .* Saxax);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% banda di interesse (MODIFICARE MANUALMENTE)
+% banda di interesse (MODIFICARE MANUALMENTE) 
 f_min = 0.65;  
-f_max = 1.8;   
+f_max = 1.7;   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %-->Step#6:Vizualization   
@@ -156,10 +156,18 @@ fprintf('Selected frequency range: %.2f Hz to %.2f Hz\n', freq_vect_filtered(1),
 fprintf('Number of frequency points passed to fmincon: %d\n', sum(idx_opt));
 
 %% OTTIMIZZATION
-theta_0 = [0.01; 0.01; -3; -1; -5; 100];
+% theta_0 = [0.01; 0.01; -3; -1; -5; 100];
+theta_0 = [-0.1; 0.1; -0.1; -0.1; -1;100 ];
 
-% Chiamiamo fmincon SOLO sui dati filtrati e super-densi
-[theta_hat, J_hat, hessian_final] = OPTIMIZATION_WITH_FMINCON(G, G_m_filtered, freq_vect_filtered, theta_0);
+
+% ---> CONVERTIAMO IN RAD/S <---
+omega_filtered = freq_vect_filtered * 2 * pi;
+
+% Passiamo omega_filtered invece di freq_vect_filtered
+[theta_hat, J_hat, hessian_final] = OPTIMIZATION_WITH_FMINCON(G, G_m_filtered, omega_filtered, theta_0);
+
+% % Chiamiamo fmincon SOLO sui dati filtrati e super-densi
+% [theta_hat, J_hat, hessian_final] = OPTIMIZATION_WITH_FMINCON(G, G_m_filtered, freq_vect_filtered, theta_0);
 
 % Salva i parametri stimati per fargli fare i plot in coda allo script
 theta_est = theta_hat;

@@ -29,6 +29,18 @@ function [theta_hat, J_hat, hessian_final] = OPTIMIZATION_WITH_FMINCON(G, G_m, f
 
     %% STEP 2: Esegui l'ottimizzazione
     fprintf('\nStarting optimization...\n\n');
+
+    %% STEP 2: Esegui l'ottimizzazione
+    fprintf('\nStarting optimization...\n\n');
+    
+    % % Limiti fisici [Xu; Xq; Mu; Mq; Xd; Md]
+    % % (Forziamo la stabilità imponendo Mq negativo e limitiamo Md)
+    % lb = [ 0.0; -0.5; -15.0; -10.0; -25.0;   0.0];
+    % ub = [ 0.5;  0.5;   0.0;   0.0;   0.0; 800.0];
+    % 
+    % % Inseriamo lb e ub in fmincon
+    % [theta_hat, J_hat, exitflag, output, ~, grad_final, hessian_final] = fmincon(objective, theta_0, ...
+    %     [], [], [], [], lb, ub, [], options);
     [theta_hat, J_hat, exitflag, output, ~, grad_final, hessian_final] = fmincon(objective, theta_0, ...
         [], [], [], [], [], [], [], options);
 
@@ -98,7 +110,7 @@ function [theta_hat, J_hat, hessian_final] = OPTIMIZATION_WITH_FMINCON(G, G_m, f
 
     % 1. Definisci il vettore dei parametri reali (sostituisci con i tuoi valori veri)
 % Assicurati che abbia la stessa dimensione di theta_hat (es. un vettore colonna)
-theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
+theta_true = [-0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
 
 % 2. Calcola l'errore percentuale
 % Utilizziamo il valore assoluto e la divisione elemento per elemento (./)
