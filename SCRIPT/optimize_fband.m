@@ -3,7 +3,7 @@ function result = optimize_fband(u, q, ax, Ts, gamma_sq_q, gamma_sq_ax, f_coh, i
 
     % Parametri
     coh_thr = 0.5;
-    step_Hz = 0.5;
+    step_Hz = 0.1;
     min_points = 8;   % minimo numero di punti in frequenza per evitare stime assurde
 
     % ============================================================
@@ -181,26 +181,28 @@ function [sys, fit_q, fit_ax, fit_sum, ok] = estimate_on_band(u, q, ax, Ts, f_mi
         % ============================================================
         % 5) Calcolo risposta del modello sulle stesse frequenze
         % ============================================================
-        G = freqresp(sys, W_f);   % dimensione: ny x nu x Nf
-        G = squeeze(G);           % diventa ny x Nf se nu = 1
+        % G = freqresp(sys, W_f);   % dimensione: ny x nu x Nf
+        % G = squeeze(G);           % diventa ny x Nf se nu = 1
+        % 
+        % if size(G,1) ~= 2
+        %     error('La dimensione della FRF del modello non è coerente con 2 uscite.');
+        % end
 
-        if size(G,1) ~= 2
-            error('La dimensione della FRF del modello non è coerente con 2 uscite.');
-        end
-
-        Yhat_q  = (G(1,:).') .* U_f;
-        Yhat_ax = (G(2,:).') .* U_f;
-
-        Ytrue_q  = Y_f(:,1);
-        Ytrue_ax = Y_f(:,2);
-
-        % ============================================================
-        % 6) Fit percentuale
-        % ============================================================
-        fit_q = 100 * (1 - norm(Ytrue_q - Yhat_q) / norm(Ytrue_q - mean(Ytrue_q)));
-        fit_ax = 100 * (1 - norm(Ytrue_ax - Yhat_ax) / norm(Ytrue_ax - mean(Ytrue_ax)));
-        fit_sum = fit_q + fit_ax;
-
+        % Yhat_q  = (G(1,:).') .* U_f;
+        % Yhat_ax = (G(2,:).') .* U_f;
+        % 
+        % Ytrue_q  = Y_f(:,1);
+        % Ytrue_ax = Y_f(:,2);
+        % 
+        % % ============================================================
+        % % 6) Fit percentuale
+        % % ============================================================
+        % fit_q = 100 * (1 - norm(Ytrue_q - Yhat_q) / norm(Ytrue_q - mean(Ytrue_q)));
+        % fit_ax = 100 * (1 - norm(Ytrue_ax - Yhat_ax) / norm(Ytrue_ax - mean(Ytrue_ax)));
+        
+        fit_sum = sum(sys.Report.Fit.FitPercent);
+        fit_ax  = sys.Report.Fit.FitPercent(2);
+        fit_q = sys.Report.Fit.FitPercent(1);
         ok = true;
 
     catch ME

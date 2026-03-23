@@ -39,19 +39,9 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
     Y = fft(y);
     U = fft(u);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MANUAL APPROACH %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% MODEL SYSTEM FRF
-% G = @(theta,freq_vect)Model_system_FRF(theta,freq_vect);
-
 %% REAL SYSTEM FRF
 [H_q_real_sys,H_ax_real_sys,freq_vect] = FRF_real_system_estimation(u,q,ax,t,fs);
-% G_m = [H_q_real_sys,H_ax_real_sys];
  
-%% OTTIMIZZATION
-% theta_0 = [-0.5; -0.1; 0.5; -20; -1; 1];
-% OPTIMIZATION_WITH_FMINCON
-% [theta_hat_oe, J_hat_oe] = outputError_FD(G_m, freq_vect, G, theta_0);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% AUTOMATIC APPROACH %%%%%%%%%%%%%%%%%%%%%%%%%%%%

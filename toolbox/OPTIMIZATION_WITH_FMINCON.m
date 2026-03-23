@@ -1,115 +1,125 @@
-%% SOLUZIONE CON FMINCON - Output Error Identification
-% Usa fmincon di MATLAB (robusto e testato) invece del custom optimizer
+function [theta_hat, J_hat, hessian_final] = OPTIMIZATION_WITH_FMINCON(G, G_m, freq_vect, theta_0)
+    %% SOLUZIONE CON FMINCON - Output Error Identification
+    % Usa fmincon di MATLAB (robusto e testato) invece del custom optimizer
+    fprintf('\n=== OUTPUT ERROR IDENTIFICATION WITH FMINCON ===\n\n');
+
+    %% STEP 1: Definisci la costfunction
+    fprintf('Setting up optimization...\n');
+    % Wrapper per fmincon
+    objective = @(theta) costFunc_outputerror(theta, G_m, freq_vect, G);
+
+    % % Opzioni
+    % options = optimoptions('fmincon', ...
+    %     'Display', 'iter-detailed', ...          % Verbose output
+    %     'Algorithm', 'sqp', ...                   % Sequential Quadratic Programming (robusto)
+    %     'TolFun', 1e-8, ...                       % Tolleranza sulla costfunction
+    %     'TolX', 1e-8, ...                         % Tolleranza sui parametri
+    %     'MaxIterations', 10000, ...
+    %     'MaxFunctionEvaluations', 30000, ...
+    %     'SpecifyObjectiveGradient', false, ...    % MATLAB calcola il gradiente numericamente
+    %     'FiniteDifferenceType', 'central');       % Differenza centrale (più accurato)
+    options = optimoptions('fmincon', ...
+        'Display', 'iter-detailed', ...          % Verbose output
+        'TolFun', 1e-8, ...                       % Tolleranza sulla costfunction
+        'TolX', 1e-8, ...                         % Tolleranza sui parametri
+        'MaxIterations', 30000, ...
+        'MaxFunctionEvaluations', 50000, ...
+        'SpecifyObjectiveGradient', false, ...    % MATLAB calcola il gradiente numericamente
+        'FiniteDifferenceType', 'central');       % Differenza centrale (più accurato)
+
+    %% STEP 2: Esegui l'ottimizzazione
+    fprintf('\nStarting optimization...\n\n');
+    [theta_hat, J_hat, exitflag, output, ~, grad_final, hessian_final] = fmincon(objective, theta_0, ...
+        [], [], [], [], [], [], [], options);
+
+    %% STEP 3: Risultati
+    fprintf('\n\n========================================\n');
+    fprintf('OPTIMIZATION RESULTS\n');
+    fprintf('========================================\n\n');
+    fprintf('Initial cost: J(theta_0) = %.6e\n', costFunc_outputerror(theta_0, G_m, freq_vect, G));
+    fprintf('Final cost:   J(theta*) = %.6e\n', J_hat);
+    fprintf('Improvement: %.2fx\n\n', costFunc_outputerror(theta_0, G_m, freq_vect, G) / J_hat);
+    fprintf('Exit flag: %d\n', exitflag);
+    fprintf('  (1 = converged to local minimum)\n');
+    fprintf('  (2 = change in x too small)\n');
+    fprintf('  (other = check MATLAB help)\n\n');
+    fprintf('Iterations: %d\n', output.iterations);
+    fprintf('Function evaluations: %d\n', output.funcCount);
+    fprintf('Algorithm: %s\n\n', output.algorithm);
+    fprintf('Final parameters:\n');
+    fprintf('  theta = [');
+    fprintf(' %.6e', theta_hat);
+    fprintf(' ]\n\n');
+    fprintf('Gradient norm at solution: %.6e\n', norm(grad_final));
+    fprintf('(Should be < 1e-6 for good convergence)\n\n');
+
+    %% STEP 4: Valuta il modello ai parametri finali
+    fprintf('========================================\n');
+    fprintf('MODEL VALIDATION\n');
+    fprintf('========================================\n\n');
+    G_model = G(theta_hat, freq_vect);
+    H_q_model = G_model(:, 1);
+    H_ax_model = G_model(:, 2);
+    H_q_meas = G_m(:, 1);
+    H_ax_meas = G_m(:, 2);
+    err_q = H_q_meas - H_q_model;
+    err_ax = H_ax_meas - H_ax_model;
+    fprintf('H_q error:\n');
+    fprintf('  Absolute RMS: %.6e\n', sqrt(mean(abs(err_q).^2)));
+    fprintf('  Relative RMS: %.2f%%\n', 100*sqrt(mean((abs(err_q)./abs(H_q_meas)).^2)));
+    fprintf('\nH_ax error:\n');
+    fprintf('  Absolute RMS: %.6e\n', sqrt(mean(abs(err_ax).^2)));
+    fprintf('  Relative RMS: %.2f%%\n', 100*sqrt(mean((abs(err_ax)./abs(H_ax_meas)).^2)));
+
+    %% STEP 5: Plot di validazione
+    figure('Position', [100 100 1200 600]);
+    subplot(1, 2, 1);
+    semilogy(freq_vect, abs(H_q_meas), 'b.-', 'LineWidth', 2, 'MarkerSize', 8);
+    hold on;
+    semilogy(freq_vect, abs(H_q_model), 'r--', 'LineWidth', 2);
+    grid on;
+    xlabel('Frequency [Hz]');
+    ylabel('Magnitude');
+    title('H_q: Pitch Rate');
+    legend('Measured', 'Model (fitted)', 'Location', 'best');
+    subplot(1, 2, 2);
+    semilogy(freq_vect, abs(H_ax_meas), 'b.-', 'LineWidth', 2, 'MarkerSize', 8);
+    hold on;
+    semilogy(freq_vect, abs(H_ax_model), 'r--', 'LineWidth', 2);
+    grid on;
+    xlabel('Frequency [Hz]');
+    ylabel('Magnitude');
+    title('H_ax: Longitudinal Accel');
+    legend('Measured', 'Model (fitted)', 'Location', 'best');
+    sgtitle(sprintf('Output Error Identification Result: J = %.3e', J_hat));
+    print(gcf, 'fmincon_result.png', '-dpng', '-r150');
+    fprintf('\n[Plot saved: fmincon_result.png]\n');
 
 
+    % 1. Definisci il vettore dei parametri reali (sostituisci con i tuoi valori veri)
+% Assicurati che abbia la stessa dimensione di theta_hat (es. un vettore colonna)
+theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
 
-fprintf('\n=== OUTPUT ERROR IDENTIFICATION WITH FMINCON ===\n\n');
+% 2. Calcola l'errore percentuale
+% Utilizziamo il valore assoluto e la divisione elemento per elemento (./)
+err_perc = (abs(theta_hat' - theta_true) ./ abs(theta_true)) * 100;
 
-% Supponi che hai già:
-% - G: function handle del modello: G(theta, freq_vect) -> [K x 2]
-% - G_m: FRF misurate [K x 2] complex
-% - freq_vect: vettore di frequenze [K x 1]
-% - theta_0: guess iniziale [6 x 1]
-
-%% STEP 1: Definisci la costfunction
-fprintf('Setting up optimization...\n');
-
-% Wrapper per fmincon
-objective = @(theta) costFunc_outputerror(theta, G_m, freq_vect, G);
-
-% Opzioni
-options = optimoptions('fmincon', ...
-    'Display', 'iter-detailed', ...          % Verbose output
-    'Algorithm', 'sqp', ...                   % Sequential Quadratic Programming (robusto)
-    'TolFun', 1e-8, ...                       % Tolleranza sulla costfunction
-    'TolX', 1e-8, ...                         % Tolleranza sui parametri
-    'MaxIterations', 200, ...
-    'MaxFunctionEvaluations', 3000, ...
-    'SpecifyObjectiveGradient', false, ...    % MATLAB calcola il gradiente numericamente
-    'FiniteDifferenceType', 'central');       % Differenza centrale (più accurato)
-
-%% STEP 2: Esegui l'ottimizzazione
-fprintf('\nStarting optimization...\n\n');
-
-[theta_hat, J_hat, exitflag, output, ~, grad_final, hessian_final] = fmincon(objective, theta_0, ...
-    [], [], [], [], [], [], [], options);
-
-%% STEP 3: Risultati
-fprintf('\n\n========================================\n');
-fprintf('OPTIMIZATION RESULTS\n');
+% 3. Stampa i risultati in modo ordinato
+fprintf('\n========================================\n');
+fprintf('PARAMETER ESTIMATION ERROR (%%)\n');
 fprintf('========================================\n\n');
 
-fprintf('Initial cost: J(theta_0) = %.6e\n', costFunc_outputerror(theta_0, G_m, freq_vect, G));
-fprintf('Final cost:   J(theta*) = %.6e\n', J_hat);
-fprintf('Improvement: %.2fx\n\n', costFunc_outputerror(theta_0, G_m, freq_vect, G) / J_hat);
+for i = 1:length(theta_true)
+    fprintf('Theta(%d): True = %.2f | Est = %.2f | Error = %.2f %%\n', ...
+            i, theta_true(i), theta_hat(i), err_perc(i));
+end
 
-fprintf('Exit flag: %d\n', exitflag);
-fprintf('  (1 = converged to local minimum)\n');
-fprintf('  (2 = change in x too small)\n');
-fprintf('  (other = check MATLAB help)\n\n');
-
-fprintf('Iterations: %d\n', output.iterations);
-fprintf('Function evaluations: %d\n', output.funcCount);
-fprintf('Algorithm: %s\n\n', output.algorithm);
-
-fprintf('Final parameters:\n');
-fprintf('  theta = [');
-fprintf(' %.6e', theta_hat);
-fprintf(' ]\n\n');
-
-fprintf('Gradient norm at solution: %.6e\n', norm(grad_final));
-fprintf('(Should be < 1e-6 for good convergence)\n\n');
-
-%% STEP 4: Valuta il modello ai parametri finali
-fprintf('========================================\n');
-fprintf('MODEL VALIDATION\n');
+% Calcola anche l'errore medio complessivo
+fprintf('\nMean Percentage Error: %.2f %%\n', mean(err_perc));
 fprintf('========================================\n\n');
-
-G_model = G(theta_hat, freq_vect);
-H_q_model = G_model(:, 1);
-H_ax_model = G_model(:, 2);
-
-H_q_meas = G_m(:, 1);
-H_ax_meas = G_m(:, 2);
-
-err_q = H_q_meas - H_q_model;
-err_ax = H_ax_meas - H_ax_model;
-
-fprintf('H_q error:\n');
-fprintf('  Absolute RMS: %.6e\n', sqrt(mean(abs(err_q).^2)));
-fprintf('  Relative RMS: %.2f%%\n', 100*sqrt(mean((abs(err_q)./abs(H_q_meas)).^2)));
-
-fprintf('\nH_ax error:\n');
-fprintf('  Absolute RMS: %.6e\n', sqrt(mean(abs(err_ax).^2)));
-fprintf('  Relative RMS: %.2f%%\n', 100*sqrt(mean((abs(err_ax)./abs(H_ax_meas)).^2)));
-
-%% STEP 5: Plot di validazione
-figure('Position', [100 100 1200 600]);
-
-subplot(1, 2, 1);
-semilogy(freq_vect, abs(H_q_meas), 'b.-', 'LineWidth', 2, 'MarkerSize', 8);
-hold on;
-semilogy(freq_vect, abs(H_q_model), 'r--', 'LineWidth', 2);
-grid on;
-xlabel('Frequency [Hz]');
-ylabel('Magnitude');
-title('H_q: Pitch Rate');
-legend('Measured', 'Model (fitted)', 'Location', 'best');
-
-subplot(1, 2, 2);
-semilogy(freq_vect, abs(H_ax_meas), 'b.-', 'LineWidth', 2, 'MarkerSize', 8);
-hold on;
-semilogy(freq_vect, abs(H_ax_model), 'r--', 'LineWidth', 2);
-grid on;
-xlabel('Frequency [Hz]');
-ylabel('Magnitude');
-title('H_ax: Longitudinal Accel');
-legend('Measured', 'Model (fitted)', 'Location', 'best');
-
-sgtitle(sprintf('Output Error Identification Result: J = %.3e', J_hat));
-
-print(gcf, 'fmincon_result.png', '-dpng', '-r150');
-fprintf('\n[Plot saved: fmincon_result.png]\n');
+    
+    fprintf('\n=== OPTIMIZATION COMPLETE ===\n\n');
+end
 
 %% HELPER FUNCTION: Cost Function
 function J = costFunc_outputerror(theta, G_m, freq_vect, G)
@@ -140,9 +150,6 @@ function J = costFunc_outputerror(theta, G_m, freq_vect, G)
     
     % Add small regularization to avoid NaN
     J = J + 1e-12;
-
-
-    
 end
 
 %% HELPER FUNCTION: Stack FRF Data
@@ -168,5 +175,3 @@ function y = stackFRFData(g)
         error('g must be Kx1 or Kx2');
     end
 end
-
-fprintf('\n=== OPTIMIZATION COMPLETE ===\n\n');

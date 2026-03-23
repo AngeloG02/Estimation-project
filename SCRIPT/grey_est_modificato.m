@@ -94,6 +94,36 @@ fprintf('Step 5: Assessing FRF quality with the coherence function... (σ_q=%.2f
 gamma_sq_q = (abs(Suq).^2) ./ (Suu .* Sqq);
 gamma_sq_ax = (abs(Suax).^2) ./ (Suu .* Saxax);
 
+%-->Step#6:Vizualization   
+    % Plot the results for analysis.
+    fprintf('Step 6: Generating plots... (σ_q=%.2f°/s, σ_ax=%.4f m/s²)\n', sigma_q, sigma_ax);
+    % Plot 1: Estimated FRFs (Bode Plot)
+    figure('Name', sprintf('Spectral Analysis (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax))
+    % Pitch Rate Channel
+    subplot(2,2,1);
+    semilogx(f, 20*log10(abs(Suq)));
+    grid on; title(sprintf('CSPD q (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax)); ylabel('Magnitude [dB]');
+    % Longitudinal Acceleration Channel
+    subplot(2,2,2);
+    semilogx(f, 20*log10(abs(Suax)));
+    grid on; title(sprintf('CSPD ax (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax));
+    % Pitch Rate coherence
+    subplot(2,2,3);
+    semilogx(f, gamma_sq_q);
+    hold on;
+    plot([f(1), f(end)], [0.7, 0.7], 'r--', 'LineWidth', 1.5); % Threshold line
+    grid on; title(sprintf('Coherence: Input (u) to Pitch Rate (q) (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax));
+    ylim([0 1.05]); ylabel('Coherence \gamma^2'); legend('Coherence', 'Trust Threshold');
+    % Longitudinal Acceleration coherence
+    subplot(2,2,4);
+    semilogx(f, gamma_sq_ax);
+    hold on;
+    plot([f(1), f(end)], [0.7, 0.7], 'r--', 'LineWidth', 1.5); % Threshold line
+    grid on; title(sprintf('Coherence: Input (u) to Longitudinal Accel. (ax) (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax));
+    ylim([0 1.05]); xlabel('Frequency [Hz]'); ylabel('Coherence \gamma^2');
+
+
+
 %% =============================================
 %  STEP 5: CREA MODELLO INIZIALE
 % =============================================
@@ -129,15 +159,15 @@ opt.SearchOptions.MaxIterations = 100;
 
 % assegna un range in cui cercare i parametri
 theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
-for i = 1:length(theta_true)
-    if theta_true(i) < 0
-        init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) * 2;
-        init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) / 2;
-    else
-        init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) / 2;
-        init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) * 2;
-    end
-end
+% for i = 1:length(theta_true)
+%     if theta_true(i) < 0
+%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) * 2;
+%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) / 2;
+%     else
+%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) / 2;
+%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) * 2;
+%     end
+% end
 
 %% =============================================
 %  STEP 6.5: TROVA BANDA OTTIMA AUTOMATICAMENTE

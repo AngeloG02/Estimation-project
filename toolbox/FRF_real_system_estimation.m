@@ -33,23 +33,32 @@ win = bartlett(M);  % BARTLETT WINDOW (good sidelobe suppression)
 % Number of segments available
 K = floor((N_total - M) / (M - noverlap)) + 1;
 
-
 %% STEP 4: FRF COMPUTATION (tfestimate - H1 Estimator)
 fprintf('\nStep 4: Computing FRF with tfestimate...\n');
 
+% ---> AGGIUNGIAMO NFFT PER AVERE PIÙ PUNTI <---
+% Usa potenze di 2. 16384 o 32768 ti daranno una griglia fittissima.
+NFFT = 16384; 
+
 % H1 Estimator: assumes noise uncorrelated with input (most common)
-[H_q, f] = tfestimate(u, q, win, noverlap, [], fs, 'Estimator', 'H1');
-[H_ax, ~] = tfestimate(u, ax, win, noverlap, [], fs, 'Estimator', 'H1');
+% Inseriamo NFFT al posto di "[]"
+[H_q, f] = tfestimate(u, q, win, noverlap, NFFT, fs, 'Estimator', 'H1');
+[H_ax, ~] = tfestimate(u, ax, win, noverlap, NFFT, fs, 'Estimator', 'H1');
+fprintf('\nStep 4: Computing FRF with tfestimate...\n');
+% 
+% % H1 Estimator: assumes noise uncorrelated with input (most common)
+% [H_q, f] = tfestimate(u, q, win, noverlap, [], fs, 'Estimator', 'H1');
+% [H_ax, ~] = tfestimate(u, ax, win, noverlap, [], fs, 'Estimator', 'H1');
 
 
-%% STEP 5: QUALITY ASSESSMENT (mscohere)
-fprintf('\nStep 5: Coherence analysis with mscohere...\n');
-
-[coh2_q, ~] = mscohere(u, q, win, noverlap, [], fs);
-[coh2_ax, ~] = mscohere(u, ax, win, noverlap, [], fs);
-
-coh_q_mean = mean(coh2_q);
-coh_ax_mean = mean(coh2_ax);
+% %% STEP 5: QUALITY ASSESSMENT (mscohere)
+% fprintf('\nStep 5: Coherence analysis with mscohere...\n');
+% 
+% [coh2_q, ~] = mscohere(u, q, win, noverlap, [], fs);
+% [coh2_ax, ~] = mscohere(u, ax, win, noverlap, [], fs);
+% 
+% coh_q_mean = mean(coh2_q);
+% coh_ax_mean = mean(coh2_ax);
 
 %% da scommentare
 
