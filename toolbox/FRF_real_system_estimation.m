@@ -1,14 +1,9 @@
 
-%% ========================================================================
-% T1.1 FRF ESTIMATION (WELCH METHOD) - LONGITUDINAL DYNAMICS
-% MONTE CARLO VERSION: Multiple Simulink runs + tfestimate/mscohere
-% ========================================================================
 
 function [H_q,H_ax,f] = FRF_real_system_estimation(u_combined,q_combined,ax_combined,t_combined,fs)
 set(0,'DefaultFigureWindowStyle','docked')
 
 
-% Final signals are concatenated data from all runs
 u_raw = u_combined;
 q_raw = q_combined;
 ax_raw = ax_combined;
@@ -28,7 +23,7 @@ fprintf('\nStep 3: Welch spectral estimation...\n');
 % Parametri Welch ottimizzati
 M = 2048;           % Lunghezza segmento (power of 2)
 noverlap = M/2;     % 50% overlap
-win = bartlett(M);  % BARTLETT WINDOW (good sidelobe suppression)
+win = hanning(M);  % BARTLETT WINDOW (good sidelobe suppression)
 
 % Number of segments available
 K = floor((N_total - M) / (M - noverlap)) + 1;
@@ -36,14 +31,22 @@ K = floor((N_total - M) / (M - noverlap)) + 1;
 %% STEP 4: FRF COMPUTATION (tfestimate - H1 Estimator)
 fprintf('\nStep 4: Computing FRF with tfestimate...\n');
 
+% % ---> AGGIUNGIAMO NFFT PER AVERE PIÙ PUNTI <---
+% % Usa potenze di 2. 16384 o 32768 ti daranno una griglia fittissima.
+% NFFT = 16384; 
+% 
+% % H1 Estimator: assumes noise uncorrelated with input (most common)
+% % Inseriamo NFFT al posto di "[]"
+% [H_q, f] = tfestimate(u, q, win, noverlap, NFFT, fs, 'Estimator', 'H1');
+% [H_ax, ~] = tfestimate(u, ax, win, noverlap, NFFT, fs, 'Estimator', 'H1');
+% fprintf('\nStep 4: Computing FRF with tfestimate...\n');
+
 % ---> AGGIUNGIAMO NFFT PER AVERE PIÙ PUNTI <---
-% Usa potenze di 2. 16384 o 32768 ti daranno una griglia fittissima.
-NFFT = 16384; 
 
 % H1 Estimator: assumes noise uncorrelated with input (most common)
 % Inseriamo NFFT al posto di "[]"
-[H_q, f] = tfestimate(u, q, win, noverlap, NFFT, fs, 'Estimator', 'H1');
-[H_ax, ~] = tfestimate(u, ax, win, noverlap, NFFT, fs, 'Estimator', 'H1');
+[H_q, f] = tfestimate(u, q, win, noverlap, [], fs, 'Estimator', 'H1');
+[H_ax, ~] = tfestimate(u, ax, win, noverlap, [], fs, 'Estimator', 'H1');
 fprintf('\nStep 4: Computing FRF with tfestimate...\n');
 % 
 % % H1 Estimator: assumes noise uncorrelated with input (most common)

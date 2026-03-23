@@ -94,8 +94,8 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % banda di interesse (MODIFICARE MANUALMENTE)
-f_min = 0.85;  
-f_max = 1.9;   
+f_min = 0.65;  
+f_max = 1.7;   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -140,7 +140,9 @@ f_max = 1.9;
 %  STEP 5: CREA MODELLO INIZIALE
 %  =============================================
 aux = {};
-theta_0 = [-0.5; -0.1; 0.5; -20; -1; 1];
+% theta_0 = [-0.5; -0.1; 0.5; -20; -1; 1];
+% Ordine dei parametri: [Xu; Xq; Mu; Mq; Xd; Md]
+theta_0 = [0.1; 0.1; -0.1; -0.1; -1;100 ];
 
 T = 0;
 
@@ -180,7 +182,8 @@ fprintf('Number of frequency points: %d\n', sum(idx));
 % =============================================
 %  STEP 3: Crea iddata
 %  =============================================
-data = iddata(Y_filtered, U_filtered,0, 'Frequency', W_filtered);
+
+data = iddata(Y_filtered, U_filtered,0.004, 'Frequency', W_filtered);
 data.InputName = 'Pitch Moment';
 data.InputUnit = '-';
 data.OutputName = {'Pitch rate', 'Longitudinal acceleration'};
@@ -198,7 +201,7 @@ opt.EnforceStability = false;
 opt.SearchMethod = 'auto';
 opt.SearchOptions.MaxIterations = 100;
 % assegna un range in cui cercare i parametri
-theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
+theta_true = [-0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
 % for i = 1:length(theta_true)
 %     if theta_true(i) < 0
 %         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i)* 2;
@@ -256,147 +259,179 @@ for i = 1:length(theta_est)
     upper = theta_est(i) + z_2sigma * std_theta(i);
     fprintf('%s: [%.6f, %.6f]\n', param_names{i}, lower, upper);
 end
-% %% T1.2 - Step 3: Parameter Correlation
-% 
-% % Correlazione: ρ_ij = cov(θ_i, θ_j) / (σ_i * σ_j)
-% rho = cov_theta ./ (std_theta * std_theta');
-% 
-% fprintf('\nParameter Correlation Matrix:\n');
-% disp(rho);
-% 
-% % Identifica parametri altamente correlati
-% for i = 1:length(theta_est)
-%     for j = i+1:length(theta_est)
-%         if abs(rho(i,j)) > 0.9
-%             fprintf('⚠️ HIGH CORRELATION: %s ↔ %s (ρ = %.3f)\n', ...
-%                 param_names{i}, param_names{j}, rho(i,j));
-%         end
-%     end
-% end
-% %% T1.2 - Step 4: Identifiability Assessment
-% 
-% relative_std = 100 * std_theta ./ abs(theta_est);
-% [~, idx_ranked] = sort(relative_std, 'descend');
-% 
-% fprintf('\nParameter Identifiability Ranking:\n');
-% for rank = 1:length(theta_est)
-%     i = idx_ranked(rank);
-%     if relative_std(i) < 5
-%         status = 'Excellent';
-%     elseif relative_std(i) < 10
-%         status = 'Good';
-%     elseif relative_std(i) < 25
-%         status = 'Moderate';
-%     else
-%         status = 'Poor';
-%     end
-%     fprintf('%d. %s: %.2f%% → %s\n', rank, ...
-%         param_names{i}, relative_std(i), status);
-% end
+%% T1.2 - Step 3: Parameter Correlation
+
+% Correlazione: ρ_ij = cov(θ_i, θ_j) / (σ_i * σ_j)
+rho = cov_theta ./ (std_theta * std_theta');
+
+fprintf('\nParameter Correlation Matrix:\n');
+disp(rho);
+
+% Identifica parametri altamente correlati
+for i = 1:length(theta_est)
+    for j = i+1:length(theta_est)
+        if abs(rho(i,j)) > 0.9
+            fprintf('⚠️ HIGH CORRELATION: %s ↔ %s (ρ = %.3f)\n', ...
+                param_names{i}, param_names{j}, rho(i,j));
+        end
+    end
+end
+%% T1.2 - Step 4: Identifiability Assessment
+
+relative_std = 100 * std_theta ./ abs(theta_est);
+[~, idx_ranked] = sort(relative_std, 'descend');
+
+fprintf('\nParameter Identifiability Ranking:\n');
+for rank = 1:length(theta_est)
+    i = idx_ranked(rank);
+    if relative_std(i) < 5
+        status = 'Excellent';
+    elseif relative_std(i) < 10
+        status = 'Good';
+    elseif relative_std(i) < 25
+        status = 'Moderate';
+    else
+        status = 'Poor';
+    end
+    fprintf('%d. %s: %.2f%% → %s\n', rank, ...
+        param_names{i}, relative_std(i), status);
+end
 % T1.2 -  Validation Against True Values
-% z_2sigma = 1.96;
-% theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
-% coverage_count = 0;
-% 
-% fprintf('\n95%% CI Coverage of True Parameters:\n');
-% for i = 1:length(theta_est)
-%     lower = theta_est(i) - z_2sigma * std_theta(i);
-%     upper = theta_est(i) + z_2sigma * std_theta(i);
-% 
-%     if (theta_true(i) >= lower) && (theta_true(i) <= upper)
-%         fprintf('✓ %s: TRUE value INSIDE CI\n', param_names{i});
-%         coverage_count = coverage_count + 1;
-%     else
-%         fprintf('✗ %s: TRUE value OUTSIDE CI\n', param_names{i});
-%     end
-% end
-% 
-% coverage_pct = 100 * coverage_count / length(theta_est);
-% fprintf('\nCoverage: %d/%d (%.0f%%)\n', coverage_count, length(theta_est), coverage_pct);
-% 
-% if coverage_pct >= 90
-%     fprintf('✓ Uncertainty correctly estimated\n');
-% elseif coverage_pct >= 60
-%     fprintf('⚠️ Some underestimation of uncertainty\n');
-% else
-%     fprintf('✗ Significant underestimation\n');
-% end
-%%
-% =============================================
-%   CONFRONTO MODELLO vs DATI FREQUENZIALI
-%  =============================================
-figure('Position', [100, 100, 1400, 900], 'Name', sprintf('Compare: Data vs Model (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax));
+z_2sigma = 1.96;
+theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
+coverage_count = 0;
 
-[mag, phase, wout] = bode(sys);
-grid on;
-title(sprintf('Bode Plot of Identified Grey-Box Model (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax), 'FontSize', 14);
+fprintf('\n95%% CI Coverage of True Parameters:\n');
+for i = 1:length(theta_est)
+    lower = theta_est(i) - z_2sigma * std_theta(i);
+    upper = theta_est(i) + z_2sigma * std_theta(i);
 
-opt_comp = compareOptions('InitialCondition', 'zero');
-compare(data, sys, opt_comp);
-% Post-processing per rendere leggibile
-h = gcf;
-for i = 1:length(h.Children)
-    ax = h.Children(i);
-    if isa(ax, 'matlab.graphics.axis.Axes')
-        ax.FontSize = 10;
-        ax.YLabel.FontSize = 10;
-        ax.XLabel.FontSize = 10;
-        ax.Title.FontSize = 11;
+    if (theta_true(i) >= lower) && (theta_true(i) <= upper)
+        fprintf('✓ %s: TRUE value INSIDE CI\n', param_names{i});
+        coverage_count = coverage_count + 1;
+    else
+        fprintf('✗ %s: TRUE value OUTSIDE CI\n', param_names{i});
     end
 end
 
-% Estrazione dati dal bode (reshape da 3D a 2D)
-mag_q  = squeeze(mag(1, 1, :));    % Pitch rate magnitude
-mag_ax = squeeze(mag(2, 1, :));    % Acceleration magnitude
-phase_q  = squeeze(phase(1, 1, :)); % Pitch rate phase
-phase_ax = squeeze(phase(2, 1, :)); % Acceleration phase
-freq_Hz = wout / (2*pi);            % Converti da rad/s a Hz
+coverage_pct = 100 * coverage_count / length(theta_est);
+fprintf('\nCoverage: %d/%d (%.0f%%)\n', coverage_count, length(theta_est), coverage_pct);
 
-figure('Position', [100, 100, 1200, 800], 'Name', sprintf('FRF Welch - Bode (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax));
+if coverage_pct >= 90
+    fprintf('✓ Uncertainty correctly estimated\n');
+elseif coverage_pct >= 60
+    fprintf('⚠️ Some underestimation of uncertainty\n');
+else
+    fprintf('✗ Significant underestimation\n');
+end
 
-% Magnitude plots
-subplot(2, 2, 1); 
-semilogx(freq_vect, 20*log10(abs(H_q_real_sys)), 'b-', 'LineWidth', 2); 
-hold on
-semilogx(freq_Hz, 20*log10(mag_q), 'r-', 'LineWidth', 2); 
-grid on; 
-title(sprintf('Pitch Rate |H_q| (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax)); 
-ylabel('[dB]'); 
-xlim([10^-1 10^2]);
-legend('real system', 'estimated')
+%% =============================================
+%   CONFRONTO TRANSFER FUNCTIONS: TRUE vs ESTIMATED
+%  =============================================
 
-subplot(2, 2, 2); 
-semilogx(freq_vect, 20*log10(abs(H_ax_real_sys)), 'b-', 'LineWidth', 2);
-hold on
-semilogx(freq_Hz, 20*log10(mag_ax), 'r-', 'LineWidth', 2); 
-grid on; 
-title(sprintf('Acceleration |H_{ax}| (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax)); 
-ylabel('[dB]'); 
-xlim([10^-1 10^2]);
-legend('real system', 'estimated')
+% 1. Creiamo il "True Model" usando i parametri esatti del Politecnico
+theta_true_col = [-0.1068; 0.1192; -5.9755; -2.6478; -10.1647; 450.71];
+true_sys = idgrey(@System_matrix, theta_true_col, 'c', {}, 0);
 
-% Phase plots
-subplot(2, 2, 3); 
-semilogx(freq_vect, angle(H_q_real_sys)*180/pi, 'b-', 'LineWidth', 2);
-hold on
-semilogx(freq_Hz, phase_q, 'r-', 'LineWidth', 2);
-grid on; 
-xlabel('Frequency [Hz]'); 
-ylabel('Phase [°]'); 
-title(sprintf('Pitch Rate Phase q (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax))
-xlim([10^-1 10^2]);
-legend('real system', 'estimated')
+% 2. Generiamo la figura
+figure('Position', [150, 150, 900, 700], ...
+       'Name', 'Transfer Function Comparison: Real vs Estimated');
 
-subplot(2, 2, 4); 
-semilogx(freq_vect, angle(H_ax_real_sys)*180/pi, 'b-', 'LineWidth', 2);
-hold on
-semilogx(freq_Hz, phase_ax, 'r-', 'LineWidth', 2);
-grid on; 
-xlabel('Frequency [Hz]'); 
-ylabel('Phase [°]');
-title(sprintf('Acceleration Phase ax (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax))
-xlim([10^-1 10^2]);
-legend('real system', 'estimated')
+% 3. Impostiamo le opzioni di Bode per replicare lo stile esatto
+opt_bode = bodeoptions;
+opt_bode.FreqUnits = 'rad/s';
+opt_bode.MagUnits = 'dB';
+opt_bode.PhaseUnits = 'deg';
+opt_bode.Title.String = 'Transfer Function Comparison: Real vs Estimated';
+opt_bode.Title.FontSize = 14;
+opt_bode.Title.FontWeight = 'bold';
+opt_bode.XLim = [1e-2, 1e2];  % Range dell'immagine di riferimento
+
+% 4. Plottiamo entrambi i sistemi: Vero (blu continuo) e Stimato (rosso tratteggiato)
+h = bodeplot(true_sys, 'b-', sys, 'r--', opt_bode);
+
+% 5. Estetica: Aggiungiamo legenda e griglia
+legend('True Model', 'Identified Model', 'Location', 'northeast');
+grid on;
+
+% Ingrossiamo un po' le linee per renderle più visibili
+set(findall(gcf,'type','line'),'LineWidth',1.2);
+% %%
+% % =============================================
+% %   CONFRONTO MODELLO vs DATI FREQUENZIALI
+% %  =============================================
+% figure('Position', [100, 100, 1400, 900], 'Name', sprintf('Compare: Data vs Model (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax));
+% 
+% [mag, phase, wout] = bode(sys);
+% grid on;
+% title(sprintf('Bode Plot of Identified Grey-Box Model (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax), 'FontSize', 14);
+% 
+% opt_comp = compareOptions('InitialCondition', 'zero');
+% compare(data, sys, opt_comp);
+% % Post-processing per rendere leggibile
+% h = gcf;
+% for i = 1:length(h.Children)
+%     ax = h.Children(i);
+%     if isa(ax, 'matlab.graphics.axis.Axes')
+%         ax.FontSize = 10;
+%         ax.YLabel.FontSize = 10;
+%         ax.XLabel.FontSize = 10;
+%         ax.Title.FontSize = 11;
+%     end
+% end
+% 
+% % Estrazione dati dal bode (reshape da 3D a 2D)
+% mag_q  = squeeze(mag(1, 1, :));    % Pitch rate magnitude
+% mag_ax = squeeze(mag(2, 1, :));    % Acceleration magnitude
+% phase_q  = squeeze(phase(1, 1, :)); % Pitch rate phase
+% phase_ax = squeeze(phase(2, 1, :)); % Acceleration phase
+% freq_Hz = wout / (2*pi);            % Converti da rad/s a Hz
+% 
+% figure('Position', [100, 100, 1200, 800], 'Name', sprintf('FRF Welch - Bode (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax));
+% 
+% % Magnitude plots
+% subplot(2, 2, 1); 
+% semilogx(freq_vect, 20*log10(abs(H_q_real_sys)), 'b-', 'LineWidth', 2); 
+% hold on
+% semilogx(freq_Hz, 20*log10(mag_q), 'r-', 'LineWidth', 2); 
+% grid on; 
+% title(sprintf('Pitch Rate |H_q| (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax)); 
+% ylabel('[dB]'); 
+% xlim([10^-1 10^2]);
+% legend('real system', 'estimated')
+% 
+% subplot(2, 2, 2); 
+% semilogx(freq_vect, 20*log10(abs(H_ax_real_sys)), 'b-', 'LineWidth', 2);
+% hold on
+% semilogx(freq_Hz, 20*log10(mag_ax), 'r-', 'LineWidth', 2); 
+% grid on; 
+% title(sprintf('Acceleration |H_{ax}| (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax)); 
+% ylabel('[dB]'); 
+% xlim([10^-1 10^2]);
+% legend('real system', 'estimated')
+% 
+% % Phase plots
+% subplot(2, 2, 3); 
+% semilogx(freq_vect, angle(H_q_real_sys)*180/pi, 'b-', 'LineWidth', 2);
+% hold on
+% semilogx(freq_Hz, phase_q, 'r-', 'LineWidth', 2);
+% grid on; 
+% xlabel('Frequency [Hz]'); 
+% ylabel('Phase [°]'); 
+% title(sprintf('Pitch Rate Phase q (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax))
+% xlim([10^-1 10^2]);
+% legend('real system', 'estimated')
+% 
+% subplot(2, 2, 4); 
+% semilogx(freq_vect, angle(H_ax_real_sys)*180/pi, 'b-', 'LineWidth', 2);
+% hold on
+% semilogx(freq_Hz, phase_ax, 'r-', 'LineWidth', 2);
+% grid on; 
+% xlabel('Frequency [Hz]'); 
+% ylabel('Phase [°]');
+% title(sprintf('Acceleration Phase ax (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax))
+% xlim([10^-1 10^2]);
+% legend('real system', 'estimated')
 %% 
 function [A, B, C ,D]= System_matrix(theta,T)
 % restituisce le due FRF (uscita1 = q, uscita2 = a_x)
