@@ -1,7 +1,7 @@
 
 
 
-function [theta_est,std_theta] = grey_est (sigma_q,sigma_ax)
+function [theta_est,std_theta] = grey_est (sigma_q,sigma_ax,f_min,f_max)
 
 % Noise
 %noise.Enabler = 0;
@@ -90,14 +90,6 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
     % Coherence formula: gamma^2 = |S_uy|^2 / (S_uu * S_yy)
     gamma_sq_q = (abs(Suq).^2) ./ (Suu .* Sqq);
     gamma_sq_ax = (abs(Suax).^2) ./ (Suu .* Saxax);
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% banda di interesse (MODIFICARE MANUALMENTE)
-f_min = 0.65;  
-f_max = 1.7;   
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 %-->Step#6:Vizualization   
     % Plot the results for analysis.
