@@ -11,8 +11,8 @@ f_min = 0.85;
 f_max = 1.9;
 
 % CAMBIARE IN BASE ALLA CONFIGURAZIONE MIGLIORE
-sigma_q = 0.7;     % [deg/s] % Caso DESTRA
-sigma_ax = 0.65;   % [m/s^2] % Caso DESTRA
+sigma_q = 1.3;     % [deg/s] % Caso SINISTRA
+sigma_ax = 0.35;   % [m/s^2] % Caso SINISTRA
 
 
 % Noise
@@ -98,7 +98,7 @@ for i = 1:N_realizations
 end
 
 % ===== ESEGUI SIMULAZIONI IN PARALLELO =====
-simOut = parsim(simIn, 'ShowProgress', 'on');
+simOut = parsim(simIn, 'ShowProgress', 'on', 'TransferBaseWorkspaceVariables', 'on');
 
 % ===== PROCESSA I RISULTATI =====
 parfor realization = 1:N_realizations
@@ -154,7 +154,7 @@ end
 % =========================================================================
 
 % 1. ISTOGRAMMI DEI PARAMETRI STIMATI
-figure('Name', 'Monte Carlo: Parameter Histograms', 'Position');
+figure('Name', 'Monte Carlo: Parameter Histograms');
 param_names = {'X_u', 'X_q', 'M_u', 'M_q', 'X_\delta', 'M_\delta'};
 for j = 1:6
     subplot(2, 3, j);
@@ -166,7 +166,7 @@ for j = 1:6
 end
 
 % 2. MAPPA DEI POLI E DEGLI ZERI (Dispersione nel piano complesso)
-figure('Name', 'Monte Carlo: Poles and Zeros Dispersion', 'Position' );
+figure('Name', 'Monte Carlo: Poles and Zeros Dispersion');
 hold on; grid on;
 % Plotta tutti i poli in blu
 plot(real(poles_mc(:)), imag(poles_mc(:)), 'bx', 'MarkerSize', 8, 'LineWidth', 1.5);
@@ -183,7 +183,7 @@ title('Dispersione di Poli (x) e Zeri (o)');
 legend('Poli', 'Zeri', 'Location', 'best');
 
 % 3. DISPERSIONE DELLA RISPOSTA IN FREQUENZA (FRF)
-figure('Name', 'Monte Carlo: FRF Dispersion', 'Position' );
+figure('Name', 'Monte Carlo: FRF Dispersion');
 % L'operatore {:} espande la cell array passando tutti i 50 modelli a bode
 bode(sys_mc{:});
 grid on;
