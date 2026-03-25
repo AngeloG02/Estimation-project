@@ -1,7 +1,7 @@
 
 
 
-function [theta_est,std_theta] = grey_est (sigma_q,sigma_ax,f_min,f_max)
+function [theta_est,std_theta,cov_theta] = grey_est (sigma_q,sigma_ax,f_min,f_max)
 
 % Noise
 %noise.Enabler = 0;
@@ -134,7 +134,7 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
 aux = {};
 % theta_0 = [-0.5; -0.1; 0.5; -20; -1; 1];
 % Ordine dei parametri: [Xu; Xq; Mu; Mq; Xd; Md]
-theta_0 = [0.1; 0.1; -0.1; -0.1; -1;100 ];
+theta_0 = [-0.001; 0.001; -1; -4.7; -1; 117];
 
 T = 0;
 
@@ -570,4 +570,31 @@ grid on
 xlabel('time')
 ylabel('ax error')
 title(sprintf('ax error (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax))
+
+%% CALCOLO DEL FITTING NEL TEMPO 
+
+% Recupero le varianze vere
+var_q = noise.ang_rate_stand_dev^2; 
+var_ax = noise.acc_stand_dev^2;
+
+% Errore Pitch Rate (q)
+e_q = out_true.q.Data - out_est.q.Data;
+% Calcolo J 
+J_q = sum(e_q.^2) / (2 * var_q); 
+% Calcolo Fit Percentuale
+fit_q_percent = 100 * (1 - norm(e_q) / norm(out_true.q.Data - mean(out_true.q.Data)));
+
+% 2. Errore Accelerazione (ax)
+e_ax = out_true.ax.Data - out_est.ax.Data;
+% Calcolo J 
+J_ax = sum(e_ax.^2) / (2 * var_ax);
+% Calcolo Fit Percentuale
+fit_ax_percent = 100 * (1 - norm(e_ax) / norm(out_true.ax.Data - mean(out_true.ax.Data)));
+
+% 3. Risultati a schermo
+fprintf('\n========== VALIDAZIONE NEL TEMPO (Sequenza 3211) ==========\n');
+fprintf('Pitch Rate (q) : J (OE) = %10.2f  |  Fit = %.2f%%\n', J_q, fit_q_percent);
+fprintf('Accel. (ax)    : J (OE) = %10.2f  |  Fit = %.2f%%\n', J_ax, fit_ax_percent);
+fprintf('===========================================================\n');
+
 end

@@ -11,8 +11,8 @@ f_min = 0.85;
 f_max = 1.9;
 
 % CAMBIARE IN BASE ALLA CONFIGURAZIONE MIGLIORE
-sigma_q = 1; % [deg/s]
-sigma_ax = 0.5; % [m/s^2]
+sigma_q = 0.7;     % [deg/s] % Caso DESTRA
+sigma_ax = 0.65;   % [m/s^2] % Caso DESTRA
 
 
 % Noise
@@ -77,9 +77,13 @@ end
 
 
 %% STEP 1: DATA ACQUISITION (Multiple Realizations)
-N_realizations = 15;
+N_realizations = 50;
 theta_est = zeros(6, N_realizations);
 std_theta = zeros(6, N_realizations);
+theta_mc = zeros(6, N_realizations); % 6 parametri
+poles_mc = zeros(3, N_realizations); % 3 poli per la dinamica longitudinale
+zeros_mc = cell(1, N_realizations);  % cell array perché il numero di zeri può variare
+sys_mc   = cell(1, N_realizations);  % salviamo tutti i modelli per il Bode
 
 % ===== CREA ARRAY DI SimulationInput =====
 simIn(1:N_realizations) = Simulink.SimulationInput('Simulator_Single_Axis');
@@ -87,10 +91,10 @@ simIn(1:N_realizations) = Simulink.SimulationInput('Simulator_Single_Axis');
 for i = 1:N_realizations
     % Imposta i seed per ogni simulazione
     simIn(i) = simIn(i).setVariable('Seed_pos', i);
-    simIn(i) = simIn(i).setVariable('Seed_vel', i + 1);
-    simIn(i) = simIn(i).setVariable('Seed_theta', i + 2);
-    simIn(i) = simIn(i).setVariable('Seed_q', i + 3);
-    simIn(i) = simIn(i).setVariable('Seed_ax', i + 4);
+    simIn(i) = simIn(i).setVariable('Seed_vel', i + N_realizations);
+    simIn(i) = simIn(i).setVariable('Seed_theta', i + 2*N_realizations);
+    simIn(i) = simIn(i).setVariable('Seed_q', i + 3*N_realizations);
+    simIn(i) = simIn(i).setVariable('Seed_ax', i + 4*N_realizations);
 end
 
 % ===== ESEGUI SIMULAZIONI IN PARALLELO =====
@@ -108,6 +112,11 @@ parfor realization = 1:N_realizations
     q = out.q.Data;
     ax = out.ax.Data;
     
+    % Rimozione della media
+    u = u - mean(u);
+    q = q - mean(q);
+    ax = ax - mean(ax);
+
     Ts = t(2) - t(1);
     
     y = [q, ax];
@@ -125,12 +134,57 @@ parfor realization = 1:N_realizations
     data = iddata(Y_filtered, U_filtered, 0, 'Frequency', W_filtered);
     [sys, ~] = greyest(data, init_sys, opt);
     
+    % salvataggio incertezza
     theta_est(:, realization) = getpvec(sys);
     cov_theta = getcov(sys);
     std_theta(:, realization) = sqrt(diag(cov_theta));
     
+    % salvataggio per i grafici montecarlo
+    theta_mc(:, realization) = getpvec(sys);
+    poles_mc(:, realization) = pole(sys);
+    zeros_mc{realization}    = tzero(sys);
+    sys_mc{realization}      = sys;
+
     fprintf('Done\n');
 end
 
 % end
+%% ========================================================================
+%  TASK 3.2 - STATISTICAL ANALYSIS (MONTE CARLO)
+% =========================================================================
 
+% 1. ISTOGRAMMI DEI PARAMETRI STIMATI
+figure('Name', 'Monte Carlo: Parameter Histograms', 'Position');
+param_names = {'X_u', 'X_q', 'M_u', 'M_q', 'X_\delta', 'M_\delta'};
+for j = 1:6
+    subplot(2, 3, j);
+    % 'pdf' per normalizzare l'istogramma come una densità di probabilità
+    histogram(theta_mc(j, :), 15, 'Normalization', 'pdf', 'FaceColor', [0.2 0.6 0.8]);
+    title(sprintf('Distribuzione di %s', param_names{j}));
+    xlabel('Valore'); ylabel('Densità di probabilità');
+    grid on;
+end
+
+% 2. MAPPA DEI POLI E DEGLI ZERI (Dispersione nel piano complesso)
+figure('Name', 'Monte Carlo: Poles and Zeros Dispersion', 'Position' );
+hold on; grid on;
+% Plotta tutti i poli in blu
+plot(real(poles_mc(:)), imag(poles_mc(:)), 'bx', 'MarkerSize', 8, 'LineWidth', 1.5);
+% Plotta tutti gli zeri in rosso
+for j = 1:N_realizations
+    z = zeros_mc{j};
+    if ~isempty(z)
+        plot(real(z), imag(z), 'ro', 'MarkerSize', 8, 'LineWidth', 1.5);
+    end
+end
+xline(0, 'k-', 'LineWidth', 1.5); % Asse immaginario (limite di stabilità)
+xlabel('Asse Reale'); ylabel('Asse Immaginario');
+title('Dispersione di Poli (x) e Zeri (o)');
+legend('Poli', 'Zeri', 'Location', 'best');
+
+% 3. DISPERSIONE DELLA RISPOSTA IN FREQUENZA (FRF)
+figure('Name', 'Monte Carlo: FRF Dispersion', 'Position' );
+% L'operatore {:} espande la cell array passando tutti i 50 modelli a bode
+bode(sys_mc{:});
+grid on;
+title('Dispersione della FRF (50 Realizzazioni Monte Carlo)');
