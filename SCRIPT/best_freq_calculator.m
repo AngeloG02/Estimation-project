@@ -72,7 +72,7 @@ ax_no_mean = ax - mean(ax);
 %-->Step#3: Spectral Estimation (Welch's Method)
 fprintf('Step 3: Performing spectral estimation using Welch''s method... (σ_q=%.2f°/s, σ_ax=%.4f m/s²)\n', sigma_q, sigma_ax);
 
-M = 2048*2;               % Segment length
+M = 4096;               % Segment length
 noverlap = M / 2;       % 50% overlap
 win = hanning(M);       % Hanning window
 

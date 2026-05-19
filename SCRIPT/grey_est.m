@@ -62,7 +62,7 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
     % variance of a simple periodogram.
     fprintf('Step 3: Performing spectral estimation using Welch''s method... (σ_q=%.2f°/s, σ_ax=%.4f m/s²)\n', sigma_q, sigma_ax);
     % Define Welch method parameters
-    M = 2048;               % Segment length (a power of 2 for FFT efficiency)
+    M = 4096;               % Segment length (a power of 2 for FFT efficiency)
     noverlap = M / 2;       % 50% overlap between segments
     win = hanning(M);       % Hanning window to reduce spectral leakage
     % Compute the required spectra using MATLAB's built-in functions
