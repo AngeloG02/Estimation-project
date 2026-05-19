@@ -3,12 +3,10 @@ clc; clear;close all
 
 %% cento
 main_quad_ANTX % inizializza i parametri, non runna il modello 
-% sigma_q_cent = 1; % [deg/s]
-% sigma_ax_cent = 0.5; % [m/s^2]
-% [f_min_cent,f_max_cent] = best_freq_calculator(sigma_q_cent,sigma_ax_cent);
+sigma_q_cent = 1; % [deg/s]
+sigma_ax_cent = 0.5; % [m/s^2]
+[f_min_cent,f_max_cent] = best_freq_calculator(sigma_q_cent,sigma_ax_cent);
 
-f_min_cent = 0.1;
-f_max_cent = 40;
 sigma_q_cent = 1; % [deg/s]
 sigma_ax_cent = 0.5; % [m/s^2]
 main_quad_ANTX % inizializza i parametri, non runna il modello 
@@ -21,12 +19,9 @@ main_quad_ANTX % inizializza i parametri, non runna il modello
 
 %% sx
 main_quad_ANTX % inizializza i parametri, non runna il modello 
-% sigma_q_sx= 1.3; % [deg/s]
-% sigma_ax_sx = 0.35; % [m/s^2]
-% [f_min_sx,f_max_sx] = best_freq_calculator(sigma_q_sx,sigma_ax_sx);
-
-f_min_sx= 0.1;
-f_max_sx= 40;
+sigma_q_sx= 1.3; % [deg/s]
+sigma_ax_sx = 0.35; % [m/s^2]
+[f_min_sx,f_max_sx] = best_freq_calculator(sigma_q_sx,sigma_ax_sx);
 
 main_quad_ANTX % inizializza i parametri, non runna il modello (ho commentato)
 sigma_q_sx= 1.3; % [deg/s]
@@ -35,12 +30,9 @@ sigma_ax_sx = 0.35; % [m/s^2]
 
 %% dx
 main_quad_ANTX % inizializza i parametri, non runna il modello 
-% sigma_q_dx  = 0.7; % [deg/s]
-% sigma_ax_dx = 0.65; % [m/s^2]
-% [f_min_dx,f_max_dx] = best_freq_calculator(sigma_q_dx,sigma_ax_dx);
-
-f_min_dx= 0.1;
-f_max_dx= 40;
+sigma_q_dx  = 0.7; % [deg/s]
+sigma_ax_dx = 0.65; % [m/s^2]
+[f_min_dx,f_max_dx] = best_freq_calculator(sigma_q_dx,sigma_ax_dx);
 
 main_quad_ANTX % inizializza i parametri, non runna il modello (ho commentato)
 sigma_q_dx  = 0.7; % [deg/s]

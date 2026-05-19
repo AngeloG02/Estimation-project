@@ -62,7 +62,7 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
     % variance of a simple periodogram.
     fprintf('Step 3: Performing spectral estimation using Welch''s method... (σ_q=%.2f°/s, σ_ax=%.4f m/s²)\n', sigma_q, sigma_ax);
     % Define Welch method parameters
-    M = 2048*2;               % Segment length (a power of 2 for FFT efficiency)
+    M = 2048;               % Segment length (a power of 2 for FFT efficiency)
     noverlap = M / 2;       % 50% overlap between segments
     win = hanning(M);       % Hanning window to reduce spectral leakage
     % Compute the required spectra using MATLAB's built-in functions
@@ -134,7 +134,7 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
 aux = {};
 % theta_0 = [-0.5; -0.1; 0.5; -20; -1; 1];
 % Ordine dei parametri: [Xu; Xq; Mu; Mq; Xd; Md]
-theta_0 = [-0.001; 0.001; -1; -4.7; -1; 117];
+theta_0 = [-0.001; 0.001; -5.8; -4.7; -10; 120];
 
 T = 0;
 
@@ -163,7 +163,7 @@ freq_Hz = (0:N-1)' / (N * Ts);
 idx = (freq_Hz >= f_min) & (freq_Hz <= f_max);
 
 
-freq_Hz_filtered = freq_Hz(idx);
+
 % Estrai solo i dati nell'intervallo
 Y_filtered = Y(idx, :);  % Mantiene entrambe le colonne
 U_filtered = U(idx);
@@ -182,59 +182,27 @@ data.OutputName = {'Pitch rate', 'Longitudinal acceleration'};
 data.OutputUnit = {'rad/s', 'm/s^2'};
 data.TimeUnit = 's';
 
-%% ========================================================================
-    %  STEP 4: COSTRUZIONE DEL WEIGHTING FILTER BASATO SULLA COERENZA
-    %  ========================================================================
-    % Attenzione: pwelch restituisce le coerenze sul vettore 'f' (meno punti).
-    % iddata lavora sulle frequenze della FFT 'freq_Hz_filtered'.
-    % Dobbiamo mappare/interpolare la coerenza sulle frequenze giuste!
-    
-    gamma_q_interp  = interp1(f, gamma_sq_q, freq_Hz_filtered, 'linear', 'extrap');
-    gamma_ax_interp = interp1(f, gamma_sq_ax, freq_Hz_filtered, 'linear', 'extrap');
-    
-    % Assicuriamoci che l'interpolazione non crei valori fuori dai limiti fisici [0, 1]
-    gamma_q_interp(gamma_q_interp < 0) = 0; gamma_q_interp(gamma_q_interp > 1) = 1;
-    gamma_ax_interp(gamma_ax_interp < 0) = 0; gamma_ax_interp(gamma_ax_interp > 1) = 1;
-
-    % Calcoliamo una singola coerenza rappresentativa (la media) per il modello MIMO
-    gamma_mean = (gamma_q_interp + gamma_ax_interp) / 2;
-
-    % CALCOLO DEL PESO OTTIMO: W(f) = gamma^2 / (1 - gamma^2)
-    % Nota: limitiamo il denominatore (0.05) per evitare che il peso diventi Infinito 
-    % nelle frequenze perfette dove gamma^2 = 1.
-    W_opt = gamma_mean ./ max(1 - gamma_mean, 0.05);
-
-    %% ========================================================================
-    %  STEP 5: DEFINIZIONE MODELLO GREY-BOX E OPZIONI DI STIMA
-    %  =======================================================================
-    theta_0 = [-0.001; 0.001; -1; -4.7; -1; 117]; 
-    init_sys = idgrey(@System_matrix, theta_0, 'c', {}, 0);
-
-    opt = greyestOptions;
-    opt.InitialState = 'backcast';
-    opt.Focus = 'simulation'; 
-    opt.Display = 'on';
-    opt.EnforceStability = true;
-    opt.SearchMethod = 'auto';
-    opt.SearchOptions.MaxIterations = 100;
-    
-    % ---> APPLICAZIONE DEL PESO ALL'ALGORITMO GREYEST <---
-    opt.WeightingFilter = W_opt(:); % Forziamo a vettore colonna
-
 %% =============================================
 %  STEP 6: CONFIGURA OPZIONI
 %  =============================================
 opt = greyestOptions;
+opt.InitialState = 'backcast';
 opt.Focus = 'simulation';
 opt.Display = 'on';
 opt.EnforceStability = false;
 opt.SearchMethod = 'auto';
 opt.SearchOptions.MaxIterations = 100;
-
-
-
+% assegna un range in cui cercare i parametri
 theta_true = [-0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
-
+% for i = 1:length(theta_true)
+%     if theta_true(i) < 0
+%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i)* 2;
+%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) /2;
+%     else
+%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) /2;
+%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) *2;
+%     end
+% end
 %% =============================================
 %  STEP 7: ESEGUI GREYEST CON DATI FREQUENZIALI
 %  =============================================
@@ -353,33 +321,83 @@ end
 %   CONFRONTO TRANSFER FUNCTIONS: TRUE vs ESTIMATED
 %  =============================================
 
-% 1. Creiamo il "True Model" usando i parametri esatti del Politecnico
+% True model
 theta_true_col = [-0.1068; 0.1192; -5.9755; -2.6478; -10.1647; 450.71];
 true_sys = idgrey(@System_matrix, theta_true_col, 'c', {}, 0);
 
-% 2. Generiamo la figura
-figure('Position', [150, 150, 900, 700], ...
+% Frequenze in rad/s
+w = logspace(-2, 2, 500);
+
+% Bode true model
+[mag_true, phase_true] = bode(true_sys, w);
+
+% Bode estimated model
+[mag_est, phase_est] = bode(sys, w);
+
+% Rimuove dimensioni singleton
+mag_true   = squeeze(mag_true);
+phase_true = squeeze(phase_true);
+
+mag_est   = squeeze(mag_est);
+phase_est = squeeze(phase_est);
+
+% Per sistema 2 output - 1 input:
+% mag(1,:) = output q
+% mag(2,:) = output ax
+
+figure('Position', [150, 150, 1000, 750], ...
        'Name', 'Transfer Function Comparison: Real vs Estimated');
 
-% 3. Impostiamo le opzioni di Bode per replicare lo stile esatto
-opt_bode = bodeoptions;
-opt_bode.FreqUnits = 'rad/s';
-opt_bode.MagUnits = 'dB';
-opt_bode.PhaseUnits = 'deg';
-opt_bode.Title.String = 'Transfer Function Comparison: Real vs Estimated';
-opt_bode.Title.FontSize = 14;
-opt_bode.Title.FontWeight = 'bold';
-opt_bode.XLim = [1e-2, 1e2];  % Range dell'immagine di riferimento
+sgtitle('Transfer Function Comparison: Real vs Estimated', ...
+        'FontSize', 14, 'FontWeight', 'bold');
 
-% 4. Plottiamo entrambi i sistemi: Vero (blu continuo) e Stimato (rosso tratteggiato)
-h = bodeplot(true_sys, 'b-', sys, 'r--', opt_bode);
+% =========================
+% Pitch rate - Magnitude
+% =========================
+subplot(2,2,1)
+semilogx(w, 20*log10(abs(mag_true(1,:))), 'b-', 'LineWidth', 1.5);
+hold on
+semilogx(w, 20*log10(abs(mag_est(1,:))), 'r--', 'LineWidth', 1.5);
+grid on
+ylabel('Magnitude [dB]')
+title('Pitch rate q')
+legend('True Model', 'Identified Model', 'Location', 'best')
 
-% 5. Estetica: Aggiungiamo legenda e griglia
-legend('True Model', 'Identified Model', 'Location', 'northeast');
-grid on;
+% =========================
+% Longitudinal acceleration - Magnitude
+% =========================
+subplot(2,2,2)
+semilogx(w, 20*log10(abs(mag_true(2,:))), 'b-', 'LineWidth', 1.5);
+hold on
+semilogx(w, 20*log10(abs(mag_est(2,:))), 'r--', 'LineWidth', 1.5);
+grid on
+ylabel('Magnitude [dB]')
+title('Longitudinal acceleration a_x')
+legend('True Model', 'Identified Model', 'Location', 'best')
 
-% Ingrossiamo un po' le linee per renderle più visibili
-set(findall(gcf,'type','line'),'LineWidth',1.2);
+% =========================
+% Pitch rate - Phase
+% =========================
+subplot(2,2,3)
+semilogx(w, phase_true(1,:), 'b-', 'LineWidth', 1.5);
+hold on
+semilogx(w, phase_est(1,:), 'r--', 'LineWidth', 1.5);
+grid on
+xlabel('Frequency [rad/s]')
+ylabel('Phase [deg]')
+title('Pitch rate q')
+
+% =========================
+% Longitudinal acceleration - Phase
+% =========================
+subplot(2,2,4)
+semilogx(w, phase_true(2,:), 'b-', 'LineWidth', 1.5);
+hold on
+semilogx(w, phase_est(2,:), 'r--', 'LineWidth', 1.5);
+grid on
+xlabel('Frequency [rad/s]')
+ylabel('Phase [deg]')
+title('Longitudinal acceleration a_x')
 % %%
 % % =============================================
 % %   CONFRONTO MODELLO vs DATI FREQUENZIALI
@@ -456,7 +474,28 @@ set(findall(gcf,'type','line'),'LineWidth',1.2);
 % title(sprintf('Acceleration Phase ax (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax))
 % xlim([10^-1 10^2]);
 % legend('real system', 'estimated')
-
+%% 
+function [A, B, C ,D]= System_matrix(theta,T)
+% restituisce le due FRF (uscita1 = q, uscita2 = a_x)
+    theta = theta(:);
+    X_u = theta(1);
+    X_q = theta(2);
+    M_u = theta(3);
+    M_q = theta(4);
+    X_d = theta(5);
+    M_d = theta(6);
+    g = 9.81;
+    A = [X_u, X_q, -g;
+         M_u, M_q,  0;
+           0,   1,  0];
+    B = [X_d;
+         M_d;
+           0];
+    C = [0,   1, 0;      % prima uscita (q)
+         X_u, X_q, 0];   % seconda uscita (a_x)
+    D = [0 ; X_d];        % [2x1] feedthrough
+   
+end
 %% T1.3 validation with 3211 sequence
 % 3211 SEQUENCE GENERATION (τ = 2 s, A = 0.1)
 Ts   = 0.01;          % sampling time [s]  (modifica se necessario)
@@ -480,6 +519,26 @@ u_3211(t_3211 >= 4*tau & t_3211 < 6*tau) = -A;   % 8–12 s  (1)
 u_3211(t_3211 >= 6*tau & t_3211 < 7*tau) =  A;   % 12–14 s (1)
 u_3211(t_3211 >= 7*tau & t_3211 < 8*tau) = -A;   % 14–16 s
 u_3211(t_3211 >= 8*tau) = 0;                    % 16–18 s
+
+
+% Plot input sequence
+figure('Name', sprintf('3211 Sequence Input (sigma_q=%.2f deg/s, sigma_ax=%.4f m/s^2)', ...
+       sigma_q, sigma_ax), ...
+       'Position', [200, 200, 900, 400]);
+
+stairs(t_3211, u_3211, 'b-', 'LineWidth', 2.0);
+grid on;
+
+xlabel('Time [s]', 'FontSize', 12);
+ylabel('Input amplitude', 'FontSize', 12);
+title('3211 Sequence (\tau = 2 s, A = 0.1)', ...
+      'FontSize', 14, 'FontWeight', 'bold');
+
+xlim([0 Tend]);
+ylim([-0.12 0.12]);
+
+set(gca, 'FontSize', 11);
+
 
 % % (facoltativo) visualizza
 % figure('Name', sprintf('3211 Sequence Input (σ_q=%.2f°/s, σ_ax=%.4f m/s²)', sigma_q, sigma_ax)); 
@@ -608,27 +667,4 @@ fprintf('Pitch Rate (q) : J (OE) = %10.2f  |  Fit = %.2f%%\n', J_q, fit_q_percen
 fprintf('Accel. (ax)    : J (OE) = %10.2f  |  Fit = %.2f%%\n', J_ax, fit_ax_percent);
 fprintf('===========================================================\n');
 
-
-%% 
-function [A, B, C ,D]= System_matrix(theta,T)
-% restituisce le due FRF (uscita1 = q, uscita2 = a_x)
-    theta = theta(:);
-    X_u = theta(1);
-    X_q = theta(2);
-    M_u = theta(3);
-    M_q = theta(4);
-    X_d = theta(5);
-    M_d = theta(6);
-    g = 9.81;
-    A = [X_u, X_q, -g;
-         M_u, M_q,  0;
-           0,   1,  0];
-    B = [X_d;
-         M_d;
-           0];
-    C = [0,   1, 0;      % prima uscita (q)
-         X_u, X_q, 0];   % seconda uscita (a_x)
-    D = [0 ; X_d];        % [2x1] feedthrough
-   
-end
 end

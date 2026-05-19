@@ -19,6 +19,10 @@ fprintf('  ✓ Signals zero-meaned (DC removed)\n');
 
 %% STEP 3: SPECTRAL ESTIMATION (Welch's Method)
 fprintf('\nStep 3: Welch spectral estimation...\n');
+   
+
+
+
 
 % Parametri Welch ottimizzati
 M = 2048;           % Lunghezza segmento (power of 2)
