@@ -50,7 +50,7 @@ freq_Hz = (0:Npos-1)' * fs / N;
 % G = @(theta,freq_vect)Model_system_FRF(theta,freq_vect);
 
 %% REAL SYSTEM FRF
-[H_q_real_sys,H_ax_real_sys,freq_vect] = FRF_real_system_estimation(u,q,ax,t,fs);
+% [H_q_real_sys,H_ax_real_sys,freq_vect] = FRF_real_system_estimation(u,q,ax,t,fs);
 % G_m = [H_q_real_sys,H_ax_real_sys];
 
 %% OTTIMIZZATION
@@ -72,7 +72,7 @@ ax_no_mean = ax - mean(ax);
 %-->Step#3: Spectral Estimation (Welch's Method)
 fprintf('Step 3: Performing spectral estimation using Welch''s method... (σ_q=%.2f°/s, σ_ax=%.4f m/s²)\n', sigma_q, sigma_ax);
 
-M = 2048;               % Segment length
+M = 2048*2;               % Segment length
 noverlap = M / 2;       % 50% overlap
 win = hanning(M);       % Hanning window
 
@@ -159,15 +159,7 @@ opt.SearchOptions.MaxIterations = 100;
 
 % assegna un range in cui cercare i parametri
 theta_true = [-0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
-% for i = 1:length(theta_true)
-%     if theta_true(i) < 0
-%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) * 2;
-%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) / 2;
-%     else
-%         init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) / 2;
-%         init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) * 2;
-%     end
-% end
+
 
 %% =============================================
 %  STEP 6.5: TROVA BANDA OTTIMA AUTOMATICAMENTE
@@ -176,11 +168,6 @@ result_band = optimize_fband(u, q, ax, Ts, gamma_sq_q, gamma_sq_ax, f, init_sys,
 
 f_min = result_band.f_min;
 f_max = result_band.f_max;
-
-fprintf('\nOptimal frequency range found: %.2f - %.2f Hz\n', f_min, f_max);
-fprintf('Best internal fit_q  = %.2f %%\n', result_band.fit_q);
-fprintf('Best internal fit_ax = %.2f %%\n', result_band.fit_ax);
-fprintf('Best internal fit_sum = %.2f %%\n', result_band.fit_sum);
 
 
 
