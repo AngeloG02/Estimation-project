@@ -1,18 +1,18 @@
 % function [theta_est,std_theta] = grey_est_slim (sigma_q,sigma_ax)
 
-clc; clear;close all
+% clc; clear;close all
 
 
 main_quad_ANTX % inizializza i parametri che servono al modello
 
 
 %%  INIZIALIZATION
-f_min = 0.85;
-f_max = 1.9;
+f_min = f_min_sx;
+f_max = f_max_sx;
 
 % CAMBIARE IN BASE ALLA CONFIGURAZIONE MIGLIORE
-sigma_q = 1.3;     % [deg/s] % Caso SINISTRA
-sigma_ax = 0.35;   % [m/s^2] % Caso SINISTRA
+sigma_q = sigma_q_sx;     % [deg/s] % Caso SINISTRA
+sigma_ax = sigma_ax_sx;   % [m/s^2] % Caso SINISTRA
 
 
 % Noise
@@ -27,7 +27,7 @@ assignin('base', 'noise',noise);
 
 T = 0;
 aux = {};
-theta_0 = [-0.5; -0.1; 0.5; -20; -1; 1];
+theta_0 = [-0.001; 0.001; -5.8; -4.7; -10; 120];
 init_sys = idgrey(@System_matrix, theta_0, 'c', aux, T);
 data.InputName = 'Pitch Moment';
 data.InputUnit = '-';
@@ -44,16 +44,6 @@ opt.SearchMethod = 'auto';
 opt.SearchOptions.MaxIterations = 100;
 
 theta_true = [0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
-for i = 1:length(theta_true)
-    if theta_true(i) < 0
-        init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i)* 2;
-        init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) /2;
-    else
-        init_sys.Structure.Parameters(1).Minimum(i) = theta_true(i) /2;
-        init_sys.Structure.Parameters(1).Maximum(i) = theta_true(i) *2;
-    end
-end
-
 
 function [A, B, C ,D]= System_matrix(theta,T)
     theta = theta(:);
@@ -131,7 +121,7 @@ parfor realization = 1:N_realizations
     U_filtered = U(idx);
     W_filtered = 2*pi * freq_Hz(idx);
     
-    data = iddata(Y_filtered, U_filtered, 0, 'Frequency', W_filtered);
+    data = iddata(Y_filtered, U_filtered, 0.004, 'Frequency', W_filtered);
     [sys, ~] = greyest(data, init_sys, opt);
     
     % salvataggio incertezza

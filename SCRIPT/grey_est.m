@@ -132,7 +132,6 @@ fprintf('\nStep 1: Acquiring data from Simulink runs... (σ_q=%.2f°/s, σ_ax=%.
 %  STEP 5: CREA MODELLO INIZIALE
 %  =============================================
 aux = {};
-% theta_0 = [-0.5; -0.1; 0.5; -20; -1; 1];
 % Ordine dei parametri: [Xu; Xq; Mu; Mq; Xd; Md]
 theta_0 = [-0.001; 0.001; -5.8; -4.7; -10; 120];
 
@@ -243,7 +242,7 @@ catch
 end
 %% T1.2 - Step 2: Confidence Intervals
 z_1sigma = 1.000;   % 68% CI
-z_2sigma = 1.960;   % 95% CI (quello più importante)
+z_2sigma = 1.960;   % 95% CI 
 z_3sigma = 2.576;   % 99% CI
 fprintf('\n95%% Confidence Intervals (σ_q=%.2f°/s, σ_ax=%.4f m/s²):\n', sigma_q, sigma_ax);
 for i = 1:length(theta_est)

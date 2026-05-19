@@ -113,7 +113,7 @@ function result = optimize_fband(u, q, ax, Ts, gamma_sq_q, gamma_sq_ax, f_coh, i
         W_f = W_pos(idx);
         
         % SNELLIMENTO: Creazione iddata essenziale senza metadati (più veloce)
-        data = iddata(Y_f, U_f, 0, 'Frequency', W_f);
+        data = iddata(Y_f, U_f, 0.004, 'Frequency', W_f);
         
         try
             sys_est = greyest(data, init_sys, opt_parfor);

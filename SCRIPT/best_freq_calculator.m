@@ -128,7 +128,7 @@ gamma_sq_ax = (abs(Suax).^2) ./ (Suu .* Saxax);
 %  STEP 5: CREA MODELLO INIZIALE
 % =============================================
 aux = {};
-theta_0 = [0.1; 0.1; -0.1; -0.1; -1;100 ];
+theta_0 = [-0.001; 0.001; -5.8; -4.7; -10; 120];
 T = 0;
 
 init_sys = idgrey(@System_matrix, theta_0, 'c', aux, T);
@@ -157,8 +157,6 @@ opt.EnforceStability = false;
 opt.SearchMethod = 'auto';
 opt.SearchOptions.MaxIterations = 100;
 
-% assegna un range in cui cercare i parametri
-theta_true = [-0.1068 0.1192 -5.9755 -2.6478 -10.1647 450.71];
 
 
 %% =============================================
