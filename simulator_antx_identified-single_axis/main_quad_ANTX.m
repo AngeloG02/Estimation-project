@@ -80,7 +80,7 @@ t=ExcitationM(:,1);
 
 simulation_time=t(end)-t(1);
 
-%% white noise seed (angelo)
+%% white noise seed
 
 % originali
 Seed_pos = 1;

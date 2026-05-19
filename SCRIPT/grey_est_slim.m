@@ -7,12 +7,13 @@ main_quad_ANTX % inizializza i parametri che servono al modello
 
 
 %%  INIZIALIZATION
-f_min = f_min_sx;
-f_max = f_max_sx;
+
+f_min = f_min_dx;
+f_max = f_max_dx;
 
 % CAMBIARE IN BASE ALLA CONFIGURAZIONE MIGLIORE
-sigma_q = sigma_q_sx;     % [deg/s] % Caso SINISTRA
-sigma_ax = sigma_ax_sx;   % [m/s^2] % Caso SINISTRA
+sigma_q = sigma_q_dx;     % [deg/s] % Caso SINISTRA
+sigma_ax = sigma_ax_dx;   % [m/s^2] % Caso SINISTRA
 
 
 % Noise

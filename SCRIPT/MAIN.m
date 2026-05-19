@@ -45,28 +45,36 @@ sigma_ax_dx = 0.65; % [m/s^2]
 % Scegli la configurazione migliore e usala nel grey_est_slim
 
 
+
 %% ========================================================================
 %  CONFRONTO INCERTEZZE (TASK 2.2) - I 3 CRITERI DI EXPERIMENT DESIGN
 % =========================================================================
 casi = {'CENTRALE', 'SINISTRA', 'DESTRA'};
 
-% --- 1. CRITERIO DELLA TRACCIA (A-optimality): min Tr[cov] ---
-% Misura l'incertezza media globale (Somma delle varianze)
-Tr_cent = trace(cov_cent);
-Tr_sx   = trace(cov_sx);
-Tr_dx   = trace(cov_dx);
+% --- NORMALIZZAZIONE DELLE COVARIANZE ---
+% Calcoliamo la covarianza relativa per evitare che i parametri numericamente 
+% più grandi (es. M_d) dominino la Traccia e l'Autovalore Massimo.
+cov_cent_norm = diag(1./theta_est_cent) * cov_cent * diag(1./theta_est_cent);
+cov_sx_norm   = diag(1./theta_est_sx)   * cov_sx   * diag(1./theta_est_sx);
+cov_dx_norm   = diag(1./theta_est_dx)   * cov_dx   * diag(1./theta_est_dx);
 
-% --- 2. CRITERIO DEL DETERMINANTE (D-optimality): min Det[cov] ---
-% Misura il volume dell'ellissoide di incertezza nello spazio a 6 dimensioni
-Det_cent = det(cov_cent);
-Det_sx   = det(cov_sx);
-Det_dx   = det(cov_dx);
+% --- 1. CRITERIO DELLA TRACCIA (A-optimality): min Tr[cov_norm] ---
+% Ora misura l'incertezza percentuale media globale
+Tr_cent = trace(cov_cent_norm);
+Tr_sx   = trace(cov_sx_norm);
+Tr_dx   = trace(cov_dx_norm);
 
-% --- 3. CRITERIO DELL'AUTOVALORE MASSIMO (E-optimality): min max(eig[cov]) ---
-% Misura l'incertezza nella direzione "peggiore" possibile
-Eig_cent = max(eig(cov_cent));
-Eig_sx   = max(eig(cov_sx));
-Eig_dx   = max(eig(cov_dx));
+% --- 2. CRITERIO DEL DETERMINANTE (D-optimality): min Det[cov_norm] ---
+% Misura il volume dell'ellissoide di incertezza percentuale
+Det_cent = det(cov_cent_norm);
+Det_sx   = det(cov_sx_norm);
+Det_dx   = det(cov_dx_norm);
+
+% --- 3. CRITERIO DELL'AUTOVALORE MASSIMO (E-optimality): min max(eig[cov_norm]) ---
+% Misura l'incertezza percentuale nella direzione "peggiore"
+Eig_cent = max(eig(cov_cent_norm));
+Eig_sx   = max(eig(cov_sx_norm));
+Eig_dx   = max(eig(cov_dx_norm));
 
 fprintf('\n\n================ CONFRONTO CRITERI DI EXPERIMENT DESIGN ================\n');
 
@@ -85,11 +93,7 @@ fprintf('   Centro: %10.4e  |  Sinistra: %10.4e  |  Destra: %10.4e\n', Eig_cent,
 [~, b3] = min([Eig_cent, Eig_sx, Eig_dx]);
 fprintf('   >>> VINCITORE AUTOVALORE MAX: Caso %s\n', casi{b3});
 fprintf('\n========================================================================\n');
-
-
-
-
 %%
 %%%%%%%%% MONTECARLO %%%%%%%%%%%%%%%%%%%%%%
-% grey_est_slim 
+grey_est_slim 
 
