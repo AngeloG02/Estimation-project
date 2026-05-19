@@ -156,7 +156,9 @@ function result = optimize_fband(u, q, ax, Ts, gamma_sq_q, gamma_sq_ax, f_coh, i
             % 4. Assegnazione Score
             mean_rel_std = max(mean_rel_std, eps); 
             if ~isinf(mean_rel_std) && ~isnan(mean_rel_std)
-                score_par(i) = weighted_fit / mean_rel_std;
+                wf_norm  = (weighted_fit - mean(all_wf))  / std(all_wf);
+                std_norm = (mean_rel_std  - mean(all_std)) / std(all_std);
+                score_par(i) = wf_norm / std_norm;
             end
             
             fit_q_par(i)  = fit_q;
